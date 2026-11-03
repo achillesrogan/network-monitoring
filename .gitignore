@@ -1,0 +1,13 @@
+.idea/
+*.iml
+.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Runtime / generated artifacts
+network_devices/scan_results.json
+network_devices/remediation_results.json
+monitoring/unavailable_devices.txt
+monitoring/dns_health.log
+monitoring/DNS-Backup/
