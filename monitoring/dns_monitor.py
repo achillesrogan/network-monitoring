@@ -21,9 +21,9 @@ for device in devices:
     if name in config.EXCLUDED or not config.in_server_subnet(ip):
         continue
 
-    user = netlib.resolve_secret(device["Username"])
-    password = netlib.resolve_secret(device["Password"])
     try:
+        user = netlib.resolve_secret(device["Username"])
+        password = netlib.resolve_secret(device["Password"])
         output = netlib.run_ssh(ip, user, password, "cat /etc/resolv.conf")
     except Exception as error:
         print(name + " - could not connect: " + str(error))
