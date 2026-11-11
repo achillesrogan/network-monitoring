@@ -26,7 +26,8 @@ def resolve_secret(value):
     name = match.group(1)
     got = os.environ.get(name, "")
     if got == "":
-        raise SystemExit("Environment variable " + name + " is not set.")
+        # Callers report this as a per-device connection failure and continue.
+        raise RuntimeError("Environment variable " + name + " is not set.")
     return got
 
 
