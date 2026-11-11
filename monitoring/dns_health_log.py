@@ -9,7 +9,7 @@ with open(config.LOG_FILE, "a") as log:
     for device in devices:
         name = device["Device Name"]
         ip = device["Device Address"]
-        if name in config.EXCLUDED or not ip.startswith("REDACTED"):
+        if name in config.EXCLUDED or not config.in_server_subnet(ip):
             continue
         try:
             output = netlib.run_ssh(ip, device["Username"], device["Password"], "cat /etc/resolv.conf")

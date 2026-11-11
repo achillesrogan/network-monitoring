@@ -9,8 +9,8 @@ import os
 import config
 import netlib
 
-# The zone file that holds the REDACTED records
-ZONE_FILE = "/etc/bind/zones/db.REDACTED"
+# Zone file that holds the records for the configured domain
+ZONE_FILE = "/etc/bind/zones/db." + config.DOMAIN
 
 devices = netlib.read_devices()
 

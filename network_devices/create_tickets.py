@@ -50,10 +50,10 @@ def _requests():
 def api_session():
     requests, HTTPAdapter, Retry = _requests()
     session = requests.Session()
-    session.headers.update({
-        "Authorization": "Bearer " + config.HELPDESK_API_TOKEN,
-        "Accept": "application/json",
-    })
+    headers = {"Accept": "application/json"}
+    if config.HELPDESK_API_TOKEN:
+        headers["Authorization"] = "Bearer " + config.HELPDESK_API_TOKEN
+    session.headers.update(headers)
     retry = Retry(total=3, backoff_factor=1, status_forcelist=(502, 503, 504),
                   allowed_methods=frozenset({"GET", "POST"}))
     session.mount("http://", HTTPAdapter(max_retries=retry))
@@ -150,6 +150,8 @@ def main() -> int:
     if args.show_api:
         return show_api(session)
     if args.list:
+        if not config.HELPDESK_API_TOKEN:
+            raise SystemExit("NETMON_API_TOKEN is not set.")
         return list_tickets(session)
 
     scan = netlib.read_json(config.SCAN_RESULTS_FILE)
@@ -157,6 +159,8 @@ def main() -> int:
     if not affected:
         log.info("Scan at %s found no affected devices - no tickets created", scan["scanned_at"])
         return 0
+    if not args.dry_run and not config.HELPDESK_API_TOKEN:
+        raise SystemExit("NETMON_API_TOKEN is not set.")
 
     url = config.HELPDESK_API_URL.rstrip("/") + config.HELPDESK_TICKET_PATH
     created, failed = [], []

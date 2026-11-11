@@ -12,6 +12,8 @@ with open(config.UNAVAILABLE_FILE, "r") as file:
 
 if len(lines) == 0:
     print("No unavailable devices - no tickets needed.")
+else:
+    config.require_api_token()
 
 for line in lines:
     name, ip = line.split(",")

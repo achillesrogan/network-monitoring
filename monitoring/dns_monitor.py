@@ -18,11 +18,11 @@ devices = netlib.read_devices()
 for device in devices:
     name = device["Device Name"]
     ip = device["Device Address"]
-    if name in config.EXCLUDED or not ip.startswith("REDACTED"):
+    if name in config.EXCLUDED or not config.in_server_subnet(ip):
         continue
 
-    user = device["Username"]
-    password = device["Password"]
+    user = netlib.resolve_secret(device["Username"])
+    password = netlib.resolve_secret(device["Password"])
     try:
         output = netlib.run_ssh(ip, user, password, "cat /etc/resolv.conf")
     except Exception as error:
@@ -45,6 +45,7 @@ for device in devices:
         continue
 
     print(name + " - DNS ALTERED " + str(servers))
+    config.require_api_token()
 
     # 1. Email
     subject = monitoring.ALTERED_SUBJECT.format(name=name, ip=ip)
@@ -62,7 +63,7 @@ for device in devices:
     print("    Ticket #" + str(ticket_id) + " created")
 
     # 3. Correct the DNS setting
-    new_file = "nameserver " + config.EXPECTED_DNS[0] + "\\nnameserver " + config.EXPECTED_DNS[1]
+    new_file = "\\n".join("nameserver " + ns for ns in config.EXPECTED_DNS)
     command = "echo " + password + " | sudo -S sh -c 'printf \"" + new_file + "\\n\" > /etc/resolv.conf'"
     netlib.run_ssh(ip, user, password, command)
     print("    DNS setting corrected")

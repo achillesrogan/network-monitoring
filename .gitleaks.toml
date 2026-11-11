@@ -1,0 +1,4 @@
+title = "network-monitoring"
+
+[extend]
+useDefault = true

@@ -1,7 +1,9 @@
 # Small helper functions shared by the monitoring scripts.
 
 import csv
+import os
 import platform
+import re
 import smtplib
 import subprocess
 from datetime import datetime
@@ -10,6 +12,22 @@ from email.message import EmailMessage
 import paramiko
 
 import config
+
+_ENV_REF = re.compile(r"^env:([A-Za-z_][A-Za-z0-9_]*)$")
+
+
+def resolve_secret(value):
+    # Plain values pass through. env:VAR_NAME is read from the environment.
+    if value is None:
+        return value
+    match = _ENV_REF.match(value.strip())
+    if not match:
+        return value
+    name = match.group(1)
+    got = os.environ.get(name, "")
+    if got == "":
+        raise SystemExit("Environment variable " + name + " is not set.")
+    return got
 
 
 def now():
@@ -39,6 +57,8 @@ def ping(ip):
 
 def run_ssh(ip, username, password, command):
     # Log in to a device over SSH, run one command, and return its output.
+    username = resolve_secret(username)
+    password = resolve_secret(password)
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(ip, username=username, password=password, timeout=10)

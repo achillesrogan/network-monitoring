@@ -10,6 +10,7 @@ import csv
 import ipaddress
 import json
 import logging
+import os
 import platform
 import re
 import shlex
@@ -154,6 +155,23 @@ class CommandResult:
         return self.exit_code == 0
 
 
+_ENV_REF = re.compile(r"^env:([A-Za-z_][A-Za-z0-9_]*)$")
+
+
+def resolve_secret(value: Optional[str]) -> Optional[str]:
+    """Return value, or the environment variable named by ``env:VAR_NAME``."""
+    if value is None:
+        return value
+    match = _ENV_REF.match(value.strip())
+    if not match:
+        return value
+    name = match.group(1)
+    got = os.environ.get(name, "")
+    if got == "":
+        raise SystemExit("Environment variable " + name + " is not set.")
+    return got
+
+
 def _paramiko():
     try:
         import paramiko
@@ -163,6 +181,8 @@ def _paramiko():
 
 
 def _open_client(host: str, username: str, password: str, sock=None):
+    username = resolve_secret(username)
+    password = resolve_secret(password)
     paramiko = _paramiko()
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -193,7 +213,7 @@ def run_command(client, command: str, password: Optional[str] = None,
     log.debug("exec: %s", command)
     stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
     if sudo and password:
-        stdin.write(password + "\n")
+        stdin.write(resolve_secret(password) + "\n")
         stdin.flush()
     stdin.channel.shutdown_write()
     out = stdout.read().decode(errors="replace")

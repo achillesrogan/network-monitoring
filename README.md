@@ -1,6 +1,6 @@
 # Network Device Monitoring & DNS Automation
 
-Python tooling that watches a lab network inventory, alerts on outages and DNS drift, opens helpdesk tickets, and remediates incorrect DNS client settings.
+Python tooling that watches a network inventory, alerts on outages and DNS drift, opens helpdesk tickets, and remediates incorrect DNS client settings.
 
 The repo has two related packages that share the same inventory (`network_devices.csv`) and the same problem space—reachability, DNS health, SMTP alerts, and ticket workflows.
 
@@ -24,7 +24,7 @@ Straightforward scripts meant to be run on a schedule (or via `monitor.py`):
 
 ### `network_devices/` — fuller automation suite
 
-A more structured set of CLI tools built on a shared `netlib` lab helper (SSH, DHCP lease lookup via the router, DNS queries):
+A more structured set of CLI tools built on a shared `netlib` helper (SSH, DHCP lease lookup via the router, DNS queries):
 
 | Script | Purpose |
 | --- | --- |
@@ -35,12 +35,12 @@ A more structured set of CLI tools built on a shared `netlib` lab helper (SSH, D
 | `fix_dns_settings.py` | Restore expected nameserver configuration |
 | `restart_dns_service.py` | Restart DNS daemons on the name servers |
 | `connect_dns_server.py` | Interactive / scripted DNS server connectivity helpers |
-| `config.py` | Settings with environment-variable overrides for hosts and secrets |
+| `config.py` | Settings loaded from the environment |
 
 ## Requirements
 
 - Python 3.10+
-- Network access to the lab hosts (ping / SSH / SMTP / helpdesk API as configured)
+- Network access to the hosts (ping / SSH / SMTP / helpdesk API as configured)
 - Dependencies for `network_devices/`:
 
 ```bash
@@ -53,16 +53,22 @@ For `monitoring/`, install the same libraries used by the scripts (`paramiko`, `
 
 ## Configuration
 
-Both packages read device rows from `network_devices.csv` (ID, name, address, credentials, OS, and so on).
+Copy `.env.example` to `.env` (that file is gitignored) or export the same variables. Both packages load `.env` from the repo root and from the package directory. Variables already set in the environment win.
 
-Shared ideas across configs:
+The Helpdesk bearer token is `NETMON_API_TOKEN`. It has no default in source. Device SSH usernames and passwords are not stored in git: `network_devices.csv` references them as `env:VARIABLE_NAME` (for example `env:NETMON_SSH_PASSWORD`).
 
-- Expected internal DNS servers (default `REDACTED` / `REDACTED`)
-- Devices excluded from checks (e.g. switches, SMTP, router)
+The committed inventory is an example. Addresses are documentation ranges (`10.0.0.0/24`, `192.168.1.0/24`, `192.168.2.0/24`) and the domain is `example.com`. Point the tools at a real network with `NETMON_DOMAIN`, `NETMON_SERVER_SUBNET`, and `NETMON_EXPECTED_DNS`, and replace the example rows in a private copy of the CSV if you need different hosts.
+
+Shared settings:
+
+- Expected DNS servers (default `10.0.0.10` / `10.0.0.20`)
+- Devices excluded from checks (switches, SMTP, router)
 - SMTP endpoint for alert mail
 - Helpdesk API URL and bearer token
 
-In `network_devices/`, prefer environment variables (`NETMON_SMTP_HOST`, `NETMON_API_TOKEN`, etc.) instead of editing secrets into source.
+## Secret scanning
+
+`.pre-commit-config.yaml` runs gitleaks on staged changes. `.github/workflows/gitleaks.yml` runs gitleaks on pushes and pull requests. Install the hook with `pre-commit install` after `pip install pre-commit`.
 
 ## Typical workflow
 
@@ -87,5 +93,5 @@ python send_resolution_email.py
 
 ## Notes
 
-- Scripts that change DNS or restart services require working SSH credentials from the CSV (or lab equivalents).
-- Keep API tokens and passwords out of public remotes when you can; use env overrides in `network_devices/config.py`.
+- Scripts that change DNS or restart services need the SSH variables named in the CSV (`NETMON_SSH_USER`, `NETMON_SSH_PASSWORD`, `NETMON_ROUTER_USER`, `NETMON_ROUTER_PASSWORD`).
+- Ticket scripts exit if `NETMON_API_TOKEN` is unset.
